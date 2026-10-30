@@ -45,7 +45,7 @@ cd installer
 go test ./...
 ```
 
-Na raiz, com Node, pnpm e Go disponíveis: `node scripts/build.mjs`. Os executáveis são gerados em `release/`. Publicações usam tags `v1.x.x` e o workflow `release.yml`.
+Na raiz, com Node, pnpm e Go disponíveis: `node scripts/build.mjs`. Os executáveis são gerados em `release/`. Publicações usam tags `vesktop-v1.x.x` e o workflow `release.yml`.
 
 ## Créditos e licença
 
