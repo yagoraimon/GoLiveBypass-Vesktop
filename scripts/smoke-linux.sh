@@ -49,7 +49,7 @@ ready 2
 printf quit > "$profile/.golive-vesktop-install-request"
 alive() {
     local pid
-    for pid in $(pgrep -u "$(id -u)" -x vesktop || true); do
+    for pid in $(pgrep -u "$(id -u)" -x 'vesktop(\.bin)?' || true); do
         if [[ -e "/proc/$pid/exe" ]]; then return 0; fi
     done
     return 1

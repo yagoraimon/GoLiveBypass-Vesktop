@@ -32,13 +32,25 @@ func vesktopProcesses() map[int]string {
 		}
 		exe, err := os.Readlink(filepath.Join(dir, "exe"))
 		exe = strings.TrimSuffix(exe, " (deleted)")
-		if err != nil || !strings.EqualFold(filepath.Base(exe), "vesktop") {
+		if err != nil || (!strings.EqualFold(filepath.Base(exe), "vesktop") && !strings.EqualFold(filepath.Base(exe), "vesktop.bin")) {
 			continue
 		}
 		env, _ := os.ReadFile(filepath.Join(dir, "environ"))
+		appImage := false
 		for _, v := range strings.Split(string(env), "\x00") {
-			if strings.HasPrefix(v, "APPIMAGE=") {
+			if strings.HasPrefix(v, "APPIMAGE=") && strings.TrimPrefix(v, "APPIMAGE=") != "" {
 				exe = strings.TrimPrefix(v, "APPIMAGE=")
+				appImage = true
+			}
+		}
+		// Keep the launcher that sets Vesktop's runtime environment.
+		if !appImage && strings.EqualFold(filepath.Base(exe), "vesktop.bin") {
+			for _, name := range []string{"vesktop", "AppRun"} {
+				launcher := filepath.Join(filepath.Dir(exe), name)
+				if info, err := os.Stat(launcher); err == nil && info.Mode().IsRegular() && info.Mode()&0111 != 0 {
+					exe = launcher
+					break
+				}
 			}
 		}
 		result[pid] = exe
