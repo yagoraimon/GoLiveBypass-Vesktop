@@ -2588,102 +2588,23 @@ async function automaticPluginUpdate(policy: PluginUpdatePolicy): Promise<void> 
     }
 }
 
-export async function configurePluginUpdates(_: IpcMainInvokeEvent, value?: unknown): Promise<PluginUpdatePolicy> {
-    const next = policyFrom(value, { enabled: true, channel: "stable" });
-    const changed = next.enabled !== pluginUpdatePolicy.enabled || next.channel !== pluginUpdatePolicy.channel;
-    pluginUpdatePolicy = next;
-    if (changed) {
-        pluginUpdatePolicyRevision++;
-        // Essas observações pertencem à política anterior. Limpe-as antes de
-        // qualquer novo voo para que o painel não apresente um resultado
-        // antigo como se já valesse para o canal recém-selecionado.
-        pluginUpdateLastCheckedAt = null;
-        pluginUpdateLastError = null;
-        // A troca real de canal/habilitação cancela o download incompatível;
-        // uma simples montagem do painel com a mesma política não deve abortar
-        // um update automático que já esteja em andamento.
-        pluginUpdateCheckFlight?.controller.abort();
-        pluginUpdateCheckFlight = null;
-        pluginUpdateFlight?.controller.abort();
-        pluginUpdateFlight = null;
-    }
+// Prebuilt Vesktop packages are updated by rerunning the fork installer.
+export async function configurePluginUpdates(_: IpcMainInvokeEvent, _value?: unknown): Promise<PluginUpdatePolicy> {
     clearPluginUpdateTimers();
-    if (changed && next.channel === "stable") {
-        try {
-            const lock = acquirePluginUpdateLock();
-            try {
-                await recoverInterruptedPluginUpdate();
-                await discardPendingBetaForStable();
-            } finally {
-                releasePluginUpdateLock(lock);
-            }
-        }
-        catch (error) {
-            setPluginUpdateLastError(next, pluginUpdatePolicyRevision, safeDiagnosticDetail(error, 500));
-            log("warn", "não consegui descartar o beta pendente ao selecionar stable", { erro: error });
-        }
-    }
-    if (!next.enabled) return next;
-    pluginUpdateInitialTimer = setTimeout(() => { void automaticPluginUpdate(pluginUpdatePolicy); }, PLUGIN_UPDATE_INITIAL_DELAY_MS);
-    pluginUpdateInitialTimer.unref?.();
-    pluginUpdatePeriodicTimer = setInterval(() => { void automaticPluginUpdate(pluginUpdatePolicy); }, PLUGIN_UPDATE_INTERVAL_MS);
-    pluginUpdatePeriodicTimer.unref?.();
-    if (changed) void automaticPluginUpdate(next);
-    return next;
+    pluginUpdatePolicy = { enabled: false, channel: "stable" };
+    return pluginUpdatePolicy;
 }
 
 export async function getPluginUpdateStatus(_: IpcMainInvokeEvent) {
-    let lock: PluginUpdateLock | undefined;
-    try {
-        lock = acquirePluginUpdateLock();
-        await recoverInterruptedPluginUpdate();
-        const installedVersion = currentPluginVersion();
-        const pendingInspection = inspectPendingUpdate();
-        const pending = reconcileReachedPendingUpdate(installedVersion, pendingInspection);
-        return {
-            current: pluginRuntimeVersion,
-            channel: pluginUpdatePolicy.channel,
-            enabled: pluginUpdatePolicy.enabled,
-            pending: Boolean(pending),
-            pendingVersion: pending?.version,
-            pendingChannel: pending?.channel,
-            lastCheckedAt: pluginUpdateLastCheckedAt,
-            lastError: pendingInspection.error ?? pluginUpdateLastError,
-        };
-    } catch (error) {
-        return {
-            current: pluginRuntimeVersion,
-            channel: pluginUpdatePolicy.channel,
-            enabled: pluginUpdatePolicy.enabled,
-            pending: false,
-            pendingVersion: undefined,
-            pendingChannel: undefined,
-            lastCheckedAt: pluginUpdateLastCheckedAt,
-            lastError: safeDiagnosticDetail(error, 500),
-        };
-    } finally {
-        releasePluginUpdateLock(lock);
-    }
+    return { current: "2.0.13", channel: "stable", enabled: false, pending: false, pendingVersion: undefined, pendingChannel: undefined, lastCheckedAt: null, lastError: null };
 }
 
-export async function checkPluginUpdate(_: IpcMainInvokeEvent, value?: unknown): Promise<PluginUpdateCheckResult> {
-    return runLogOperation("updater-check", async () => {
-        const policy = policyFrom(value);
-        const revision = pluginUpdatePolicyRevision;
-        const result = runPluginUpdateCheck(policy);
-        void result.then(valueResult => setPluginUpdateLastError(policy, revision, valueResult.ok ? null : valueResult.error));
-        return await result;
-    });
+export async function checkPluginUpdate(_: IpcMainInvokeEvent, _value?: unknown): Promise<PluginUpdateCheckResult> {
+    return { ok: true, current: "2.0.13", channel: "stable", latest: "2.0.13", available: false, pending: false };
 }
 
-export async function updatePlugin(_: IpcMainInvokeEvent, value?: unknown): Promise<PluginUpdateResult> {
-    return runLogOperation("updater-update", async () => {
-        const policy = policyFrom(value);
-        const revision = pluginUpdatePolicyRevision;
-        const result = runPluginUpdate(policy, revision);
-        void result.then(valueResult => setPluginUpdateLastError(policy, revision, valueResult.ok ? null : valueResult.error));
-        return await result;
-    });
+export async function updatePlugin(_: IpcMainInvokeEvent, _value?: unknown): Promise<PluginUpdateResult> {
+    return { ok: false, updated: false, current: "2.0.13", channel: "stable", pending: false, error: "Atualize executando novamente o comando de instalacao em https://github.com/yagoraimon/GoLiveBypass-Vesktop#instalar" };
 }
 
 function readInstalledPluginVersion(target: string): string {
@@ -2694,10 +2615,7 @@ function readInstalledPluginVersion(target: string): string {
     return version;
 }
 
-function currentPluginVersion(): string {
-    try { return readInstalledPluginVersion(userpluginSource().target); }
-    catch { return normalizePluginVersion(PLUGIN_VERSION) ?? UNKNOWN_PLUGIN_VERSION; }
-}
+function currentPluginVersion(): string { return "2.0.13"; }
 
 function userpluginSource(allowMissingTarget = false) {
     const runtimeDir = resolve(__dirname);
@@ -2851,13 +2769,6 @@ app.on("will-quit", () => {
 
 app.whenReady().then(async () => {
     log("info", `abrindo plugin VPN | ${process.platform} ${process.arch} | electron ${process.versions.electron}`);
-    try {
-        const lock = acquirePluginUpdateLock();
-        try { await recoverInterruptedPluginUpdate({ allowStaged: true }); }
-        finally { releasePluginUpdateLock(lock); }
-    } catch (error) {
-        log("warn", "não consegui concluir a recuperação de update interrompido", { erro: error });
-    }
     // Capture antes de qualquer update automático: depois do preparo o
     // manifest do checkout pode estar novo, embora este processo ainda seja o
     // antigo e aguarde o reload explícito.

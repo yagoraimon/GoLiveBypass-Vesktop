@@ -1,16 +1,6 @@
+.build/
+release/
+installer/payload/*
+!installer/payload/.gitkeep
+tools/proton-confgen/build/
 node_modules/
-dist/
-*.log
-
-# api (Go)
-api/.env
-api/api
-
-# config local do agente
-.commandcode/
-.codex/
-.superpowers/
-
-# artefatos locais de build/validação (o CI gera os helpers no zip do plugin)
-/tmp/
-goLiveBypass/bin/

@@ -13,8 +13,7 @@
     "linux"
   ],
   "updater": {
-    "type": "github",
-    "id": "bezumiya/GoLiveBypass",
-    "assetName": "goLiveBypass-vencord.zip"
+    "type": "manual",
+    "url": "https://github.com/yagoraimon/GoLiveBypass-Vesktop#instalar"
   }
 }
