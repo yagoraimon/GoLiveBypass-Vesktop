@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
-	"time"
 )
 
 func checkUser() error {
@@ -100,24 +99,44 @@ func storageDir() (string, error) {
 	return filepath.Join(p, "golivebypass-vesktop"), nil
 }
 
-func stopVesktop() error {
-	for pid := range vesktopProcesses() {
-		p, _ := os.FindProcess(pid)
-		if err := p.Signal(syscall.SIGTERM); err != nil && !errors.Is(err, os.ErrProcessDone) {
-			return err
+func vesktopRunning() bool { return len(vesktopProcesses()) > 0 }
+
+func stopVesktop(data string) error {
+	if !vesktopRunning() {
+		return nil
+	}
+	defer os.Remove(filepath.Join(data, shutdownFile))
+	accepted, err := requestPackagedExit(data)
+	if err != nil {
+		return err
+	}
+	if !accepted {
+		if legacyVPNSessionExists() {
+			return errors.New("uma VPN do plugin original esta ativa. Saia do Vesktop pelo menu e execute novamente para preservar a rede")
+		}
+		for pid := range vesktopProcesses() {
+			command, err := os.ReadFile(filepath.Join("/proc", strconv.Itoa(pid), "cmdline"))
+			if err != nil || strings.Contains(string(command), "--type=") {
+				continue
+			}
+			p, err := os.FindProcess(pid)
+			if err != nil {
+				continue
+			}
+			if err := p.Signal(syscall.SIGTERM); err != nil && !errors.Is(err, os.ErrProcessDone) {
+				return err
+			}
 		}
 	}
-	for i := 0; i < 50; i++ {
-		if len(vesktopProcesses()) == 0 {
-			return nil
-		}
-		time.Sleep(200 * time.Millisecond)
+	if waitForVesktopExit() {
+		return nil
 	}
-	return errors.New("o Vesktop continua aberto; feche-o e execute novamente. Configuracoes preservadas")
+	return errors.New("o Vesktop continua aberto; use Sair no menu e execute novamente. Configuracoes preservadas")
 }
 
-func launchVesktop(exe string) error {
+func launchVesktop(exe, data string) error {
 	cmd := exec.Command(exe)
+	cmd.Env = append(os.Environ(), "VENCORD_USER_DATA_DIR="+data)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 	if err := cmd.Start(); err != nil {
 		return err

@@ -1,15 +1,18 @@
 package main
 
 import (
+	"bytes"
 	"embed"
 	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"runtime"
+	"time"
 )
 
 //go:embed all:payload
@@ -39,8 +42,13 @@ func loadConfig(dir, name string) (savedFile, error) {
 	if len(b) >= 3 && string(b[:3]) == "\xef\xbb\xbf" {
 		b = b[3:]
 	}
-	if err := json.Unmarshal(b, &s.value); err != nil {
+	decoder := json.NewDecoder(bytes.NewReader(b))
+	decoder.UseNumber()
+	if err := decoder.Decode(&s.value); err != nil {
 		return s, fmt.Errorf("%s: JSON invalido: %w", name, err)
+	}
+	if decoder.Decode(new(any)) != io.EOF {
+		return s, fmt.Errorf("%s: dados extras depois do JSON", name)
 	}
 	if s.value == nil {
 		return s, fmt.Errorf("%s: esperado um objeto JSON", name)
@@ -180,7 +188,12 @@ func install(data, root string, payload fs.FS) (err error) {
 					restoreErrors = append(restoreErrors, e)
 				}
 			}
-			return errors.Join(fmt.Errorf("nao foi possivel salvar configuracoes: %w; backup: %s", e, backup), errors.Join(restoreErrors...))
+			restoreError := errors.Join(restoreErrors...)
+			// A state file that could not be restored may still point at this build.
+			if restoreError != nil {
+				committed = true
+			}
+			return errors.Join(fmt.Errorf("nao foi possivel salvar configuracoes: %w; backup: %s", e, backup), restoreError)
 		}
 	}
 	committed = true
@@ -237,17 +250,17 @@ func run() error {
 	}
 	fmt.Println("GoLiveBypass para Vesktop —", version)
 	fmt.Println("Fechando o Vesktop para preservar as configuracoes...")
-	if err := stopVesktop(); err != nil {
+	if err := stopVesktop(data); err != nil {
 		return err
 	}
 	if err := install(data, root, payload); err != nil {
 		if exe != "" && !*noLaunch {
-			_ = launchVesktop(exe)
+			_ = launchVesktop(exe, data)
 		}
 		return err
 	}
 	if !*noLaunch {
-		if err := launchVesktop(exe); err != nil {
+		if err := launchVesktop(exe, data); err != nil {
 			return fmt.Errorf("plugin instalado; nao consegui abrir o Vesktop: %w", err)
 		}
 	}
@@ -260,4 +273,44 @@ func main() {
 		fmt.Fprintln(os.Stderr, "Falha:", err)
 		os.Exit(1)
 	}
+}
+
+const shutdownFile = ".golive-vesktop-install-request"
+
+func requestPackagedExit(data string) (bool, error) {
+	if err := writeAtomic(filepath.Join(data, shutdownFile), []byte("quit")); err != nil {
+		return false, err
+	}
+	until := time.Now().Add(2 * time.Second)
+	for time.Now().Before(until) {
+		if !vesktopRunning() {
+			return true, nil
+		}
+		b, _ := os.ReadFile(filepath.Join(data, shutdownFile))
+		if string(b) == "accepted" {
+			return true, nil
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	return false, nil
+}
+
+func legacyVPNSessionExists() bool {
+	root, err := storageDir()
+	if err != nil {
+		return true
+	}
+	_, err = os.Stat(filepath.Join(filepath.Dir(root), "GoLiveBypass", "plugin-vpn", "owner.lock"))
+	return err == nil || !errors.Is(err, os.ErrNotExist)
+}
+
+func waitForVesktopExit() bool {
+	until := time.Now().Add(30 * time.Second)
+	for time.Now().Before(until) {
+		if !vesktopRunning() {
+			return true
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+	return !vesktopRunning()
 }

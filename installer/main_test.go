@@ -7,7 +7,73 @@ import (
 	"path/filepath"
 	"testing"
 	"testing/fstest"
+	"time"
 )
+
+func TestMain(m *testing.M) {
+	if output := os.Getenv("GOLIVE_TEST_LAUNCH_OUTPUT"); output != "" {
+		if err := os.WriteFile(output, []byte(os.Getenv("VENCORD_USER_DATA_DIR")), 0600); err != nil {
+			os.Exit(2)
+		}
+		os.Exit(0)
+	}
+	os.Exit(m.Run())
+}
+
+func TestLaunchUsesSelectedProfile(t *testing.T) {
+	output, profile := filepath.Join(t.TempDir(), "profile.txt"), t.TempDir()
+	t.Setenv("GOLIVE_TEST_LAUNCH_OUTPUT", output)
+	t.Setenv("VENCORD_USER_DATA_DIR", "wrong inherited profile")
+	exe, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := launchVesktop(exe, profile); err != nil {
+		t.Fatal(err)
+	}
+	until := time.Now().Add(10 * time.Second)
+	for time.Now().Before(until) {
+		if b, err := os.ReadFile(output); err == nil {
+			if string(b) != profile {
+				t.Fatalf("wrong profile: %s", b)
+			}
+			return
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	t.Fatal("Vesktop child did not receive selected profile")
+}
+
+func TestRejectsTrailingJSONWithoutChanges(t *testing.T) {
+	data := t.TempDir()
+	put(t, data, "state.json", "{}{}")
+	if err := install(data, t.TempDir(), bundle()); err == nil {
+		t.Fatal("trailing JSON accepted")
+	}
+	b, _ := os.ReadFile(filepath.Join(data, "state.json"))
+	if string(b) != "{}{}" {
+		t.Fatal("invalid original changed")
+	}
+}
+
+func TestInstallPreservesLargeJSONNumbers(t *testing.T) {
+	data, root := t.TempDir(), t.TempDir()
+	put(t, data, "state.json", `{"largeNumber":9007199254740993}`)
+	if err := install(data, root, bundle()); err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(filepath.Join(data, "state.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var state map[string]json.RawMessage
+	if err := json.Unmarshal(b, &state); err != nil {
+		t.Fatal(err)
+	}
+	if string(state["largeNumber"]) != "9007199254740993" {
+		t.Fatalf("large setting changed: %s", state["largeNumber"])
+	}
+}
 
 func bundle() fs.FS {
 	p := fstest.MapFS{}

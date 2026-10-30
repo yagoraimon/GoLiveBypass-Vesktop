@@ -26,6 +26,8 @@ import {
     type Stats,
     statSync,
     writeFileSync,
+    watchFile,
+    unwatchFile,
 } from "fs";
 import type { ClientRequest } from "http";
 import { request } from "https";
@@ -2766,6 +2768,21 @@ app.on("before-quit", event => {
 app.on("will-quit", () => {
     disposeWireSockSnapshotWorker();
 });
+
+// Installer shutdown handshake. Quit through the existing VPN cleanup path.
+const installerExitRequest = join(process.env.VENCORD_USER_DATA_DIR || app.getPath("userData"), ".golive-vesktop-install-request");
+try { rmSync(installerExitRequest, { force: true }); } catch { }
+watchFile(installerExitRequest, { interval: 250, persistent: false }, (current, previous) => {
+    if (current.nlink === 0 || current.mtimeMs === previous.mtimeMs) return;
+    try {
+        if (readFileSync(installerExitRequest, "utf8") !== "quit") return;
+        unwatchFile(installerExitRequest);
+        writeFileSync(installerExitRequest, "accepted", { mode: 0o600 });
+        app.quit();
+    } catch (error) { log("warn", "nao consegui concluir o pedido de encerramento do instalador", { erro: error }); }
+});
+app.on("will-quit", () => unwatchFile(installerExitRequest));
+// End installer shutdown handshake.
 
 app.whenReady().then(async () => {
     log("info", `abrindo plugin VPN | ${process.platform} ${process.arch} | electron ${process.versions.electron}`);

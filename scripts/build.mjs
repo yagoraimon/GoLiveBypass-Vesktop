@@ -7,6 +7,8 @@ import assert from 'node:assert/strict';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const upstream = JSON.parse(fs.readFileSync(path.join(root, 'upstream.json')));
+const version = fs.readFileSync(path.join(root, 'installer/main.go'), 'utf8').match(/var version = "([^"]+)"/)[1];
+if (process.env.GITHUB_REF?.startsWith('refs/tags/')) assert.equal(process.env.GITHUB_REF, `refs/tags/v${version}`, 'Tag and installer version must match');
 const win = process.platform === 'win32';
 assert(process.arch === 'x64' && (win || process.platform === 'linux'), 'Windows/Linux x64 required');
 const vcs = path.join(root, '.build', 'Vencord');
