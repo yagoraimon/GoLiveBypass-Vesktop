@@ -1,10 +1,16 @@
 # GoLiveBypass para Vesktop
 
-Fork de [bezumiya/GoLiveBypass](https://github.com/bezumiya/GoLiveBypass), restrito ao plugin e à instalação no **Vesktop**. Windows x64 e Linux x64. macOS fica para uma versão futura.
+Fork de [bezumiya/GoLiveBypass](https://github.com/bezumiya/GoLiveBypass), restrito ao plugin e à instalação no **Vesktop**. Windows x64 e Linux x64.
+
+## Outros usos e macOS
+
+Para qualquer uso do GoLiveBypass que não seja o plugin para Vesktop, acesse o [repositório original](https://github.com/bezumiya/GoLiveBypass) e siga as orientações de lá.
+
+**macOS:** baixe o [GoLiveBypass macOS 0.8.0 (DMG universal) no projeto original](https://github.com/bezumiya/GoLiveBypass/releases/tag/macos-v0.8.0). O aplicativo para macOS e suas orientações são mantidos no repositório original.
 
 ## Instalar
 
-Tenha o Vesktop instalado e conectado à sua conta Discord. Execute o comando como seu usuário normal. O instalador fecha o Vesktop, instala o build pronto, preserva suas configurações e abre o app com o GoLiveBypass ativado. Depois, conclua o assistente Proton/WireGuard dentro do Vesktop.
+Baixe o [Vesktop no site oficial](https://vesktop.dev/), caso ainda não esteja instalado, e conecte-se à sua conta Discord. Execute o comando como seu usuário normal. O instalador fecha o Vesktop, instala o build pronto, preserva suas configurações e abre o app com o GoLiveBypass ativado. Depois, conclua o assistente Proton/WireGuard dentro do Vesktop.
 
 **Windows — cole no PowerShell:**
 
