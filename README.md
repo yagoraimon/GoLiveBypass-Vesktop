@@ -10,6 +10,8 @@ Para qualquer uso do GoLiveBypass que não seja o plugin para Vesktop, acesse o 
 
 ## Instalar
 
+**Requisito para seguir este tutorial:** tenha uma conta no [ProtonVPN Free (gratuito)](https://protonvpn.com/free-vpn). O passo a passo abaixo usa o modo Proton; o plano Free é suficiente.
+
 ### Tutorial rápido
 
 1. **Prepare o Vesktop.** [Baixe o aplicativo no site oficial](https://vesktop.dev/), caso ainda não esteja instalado. Abra o Vesktop e entre na sua conta Discord.
@@ -30,7 +32,7 @@ Para qualquer uso do GoLiveBypass que não seja o plugin para Vesktop, acesse o 
 
 3. **Aguarde a instalação.** O instalador fecha e reabre o Vesktop com o GoLiveBypass já ativado, preservando suas configurações.
 
-4. **Configure a conexão.** No assistente **Configurar o GoLiveBypass**, entre na sua conta ProtonVPN ou escolha usar uma configuração WireGuard própria. Avance pelas etapas de conta/configuração, **Rota real** e **Pronto**. Conclua o assistente e permita o reinício solicitado para aplicar a rota.
+4. **Configure a conexão.** No assistente **Configurar o GoLiveBypass**, entre com sua conta ProtonVPN Free. Avance pelas etapas **Conta Proton**, **Rota real** e **Pronto**. Conclua o assistente e permita o reinício solicitado para aplicar a rota.
 
 5. **Teste o funcionamento.** Depois de concluir a configuração, entre em uma chamada e teste o compartilhamento de tela e a câmera.
 
