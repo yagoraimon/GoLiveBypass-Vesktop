@@ -10,21 +10,33 @@ Para qualquer uso do GoLiveBypass que não seja o plugin para Vesktop, acesse o 
 
 ## Instalar
 
-Baixe o [Vesktop no site oficial](https://vesktop.dev/), caso ainda não esteja instalado, e conecte-se à sua conta Discord. Execute o comando como seu usuário normal. O instalador fecha o Vesktop, instala o build pronto, preserva suas configurações e abre o app com o GoLiveBypass ativado. Depois, conclua o assistente Proton/WireGuard dentro do Vesktop.
+### Tutorial rápido
 
-**Windows — cole no PowerShell:**
+1. **Prepare o Vesktop.** [Baixe o aplicativo no site oficial](https://vesktop.dev/), caso ainda não esteja instalado. Abra o Vesktop e entre na sua conta Discord.
 
-```powershell
-irm https://raw.githubusercontent.com/yagoraimon/GoLiveBypass-Vesktop/main/install.ps1 | iex
-```
+2. **Execute o comando do seu sistema.** Use seu usuário normal, sem abrir o PowerShell como administrador e sem usar `sudo` no Linux.
 
-**Linux — cole no terminal:**
+   **Windows x64 — cole no PowerShell e pressione Enter:**
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/yagoraimon/GoLiveBypass-Vesktop/main/install.sh | bash
-```
+   ```powershell
+   irm https://raw.githubusercontent.com/yagoraimon/GoLiveBypass-Vesktop/main/install.ps1 | iex
+   ```
 
-Não precisa instalar Git, Node, pnpm ou Go. O download é conferido por SHA-256 antes de executar. Não execute com `sudo` nem como administrador: a autorização para configurar a VPN é solicitada pelo plugin depois da instalação.
+   **Linux x64 nativo/AppImage — cole no terminal e pressione Enter:**
+
+   ```bash
+   curl -fsSL https://raw.githubusercontent.com/yagoraimon/GoLiveBypass-Vesktop/main/install.sh | bash
+   ```
+
+3. **Aguarde a instalação.** O instalador fecha e reabre o Vesktop com o GoLiveBypass já ativado, preservando suas configurações.
+
+4. **Configure a conexão.** No assistente **Configurar o GoLiveBypass**, entre na sua conta ProtonVPN ou escolha usar uma configuração WireGuard própria. Avance pelas etapas de conta/configuração, **Rota real** e **Pronto**. Conclua o assistente e permita o reinício solicitado para aplicar a rota.
+
+5. **Teste o funcionamento.** Depois de concluir a configuração, entre em uma chamada e teste o compartilhamento de tela e a câmera.
+
+Se precisar reabrir o assistente, vá a **Configurações de usuário → Vencord → Plugins → GoLiveBypass**, abra as opções do plugin e clique em **Abrir guia de configuração**.
+
+Não precisa instalar Git, Node, pnpm ou Go. O download é conferido por SHA-256 antes de executar. As permissões necessárias para configurar a VPN são solicitadas pelo plugin depois da instalação.
 
 ## O que muda
 
