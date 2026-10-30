@@ -31,6 +31,7 @@ func vesktopProcesses() map[int]string {
 			continue
 		}
 		exe, err := os.Readlink(filepath.Join(dir, "exe"))
+		exe = strings.TrimSuffix(exe, " (deleted)")
 		if err != nil || !strings.EqualFold(filepath.Base(exe), "vesktop") {
 			continue
 		}
