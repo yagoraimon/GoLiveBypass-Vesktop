@@ -22,6 +22,7 @@ import {
     safeDiagnosticDetail,
     validateWireGuardConfig,
     VPN_OWNER_KIND,
+    VPN_RELAUNCH_ARG,
     VPN_SCHEMA_VERSION,
     type VpnDiagnostic,
     type VpnMode,
@@ -388,6 +389,7 @@ export class PluginVpnController {
     private restarting = false;
     private initialized = false;
     private automaticBootSuppressed = false;
+    private automaticBoot: Promise<VpnOperationResult> | null = null;
     private optimization: { id: string; controller: AbortController } | null = null;
     private protonLogin: { id: string; controller: AbortController } | null = null;
     private routeMeasurement: ProtonRouteMeasurement | null = null;
@@ -812,16 +814,7 @@ export class PluginVpnController {
         return this.serial(() => this.startInternal(true));
     }
 
-    // Ativação automática do boot (processo principal e renderer). Não é a ativação do usuário:
-    // só adota um túnel já ativo e NUNCA relança o Discord nem limpa a suspensão de autostart.
-    //
-    // Por que não subir o túnel aqui: sem o relaunch o Discord ficaria fora do filtro por
-    // aplicativo e o usuário acharia que estava protegido sem estar (o README promete o
-    // reinício na ativação). E por que não relançar: repetir o relaunch a cada boot transforma
-    // um relaunch não confirmado em ciclo infinito -- cada processo novo relançava o Discord,
-    // nascia outro, e a VPN ficava parando/começando a cada ~30s (relato: o Discord não
-    // fechava nem reabria, só saía pelo gerenciador de tarefas). O caminho explícito continua
-    // em `enable()`, chamado pelo botão do painel.
+    // Uma tentativa por abertura; o argumento de relaunch impede ciclos entre processos.
     public enableAutomatic(): Promise<VpnOperationResult> {
         if (this.automaticBootSuppressed) {
             this.options.log("warn", "ativação automática suspensa após relaunch não confirmado");
@@ -832,7 +825,7 @@ export class PluginVpnController {
                 error: "A ativação automática está suspensa porque o último relaunch não confirmou a VPN. Ative pelo painel.",
             });
         }
-        return this.serial(() => this.adoptActiveTunnelAtBoot());
+        return this.automaticBoot ??= this.serial(() => this.adoptActiveTunnelAtBoot());
     }
 
     private async adoptActiveTunnelAtBoot(): Promise<VpnOperationResult> {
@@ -843,6 +836,12 @@ export class PluginVpnController {
             return { success: false, suppressed: true, state: this.state, error: "Não foi possível confirmar o estado da VPN no boot." };
         }
         if (!inspection.active || !inspection.owned) {
+            const settings = this.options.readSettings() as { vpnAutoStart?: boolean } | null;
+            if (this.options.isEnabled() && this.state === "inactive" && !inspection.active
+                && !("externalConflict" in inspection && inspection.externalConflict)
+                && settings?.vpnAutoStart !== false && !process.argv.includes(VPN_RELAUNCH_ARG)) {
+                return this.startInternal(true, false);
+            }
             this.options.log("info", "VPN não foi ativada automaticamente porque o túnel não está ativo; ative pelo painel");
             return {
                 success: false,
@@ -1775,7 +1774,7 @@ export class PluginVpnController {
         this.options.log("warn", "VPN recusada para preservar WireSock externo", { motivo: this.externalReason });
     }
 
-    private async startInternal(relaunch: boolean): Promise<VpnOperationResult> {
+    private async startInternal(relaunch: boolean, allowManagedTakeover = true): Promise<VpnOperationResult> {
         if (isLinux()) return this.startLinuxInternal(relaunch);
         if (!isSupportedWindowsArchitecture(process.platform, process.arch)) {
             this.state = "blocked_external";
@@ -1818,7 +1817,7 @@ export class PluginVpnController {
         // Conflito gerenciado (GUI/pool do GoLiveBypass) não é VPN externa: somente a
         // ativação explícita (`relaunch`) pode retomá-lo. Boot, restauração interna,
         // watchdog e status continuam sem encerrar processos.
-        const managedConflict = relaunch && existing.active && !existing.owned
+        const managedConflict = allowManagedTakeover && relaunch && existing.active && !existing.owned
             && (existing.origin === "gui" || existing.origin === "managed");
         if (existing.active && !existing.owned && !managedConflict) {
             this.blockExternal(existing.reason || "WireSock externo está ativo.");
@@ -1881,7 +1880,7 @@ export class PluginVpnController {
                     const reinspect = this.inspectWindows();
                     const managedAgain = reinspect.reliable && reinspect.active && !reinspect.owned
                         && (reinspect.origin === "gui" || reinspect.origin === "managed");
-                    if (attempt === 0 && managedAgain) {
+                    if (allowManagedTakeover && attempt === 0 && managedAgain) {
                         this.options.log("warn", "instância gerenciada reapareceu durante a ativação; retomando de novo", { mode: "diagnostic-only" });
                         continue;
                     }
@@ -2730,7 +2729,8 @@ export class PluginVpnController {
                 if (!requestRelaunch) throw new Error("o bridge nativo não forneceu relaunch Linux");
                 if (!await requestRelaunch(targetNamespace)) throw new Error("o bridge nativo recusou o relaunch Linux");
             } else {
-                app.relaunch();
+                const args = process.argv.slice(1).filter(arg => arg !== VPN_RELAUNCH_ARG);
+                app.relaunch({ args: [...args, VPN_RELAUNCH_ARG] });
                 app.exit(0);
             }
             return true;

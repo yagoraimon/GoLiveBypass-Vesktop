@@ -2052,6 +2052,11 @@ const settings = definePluginSettings({
         default: false,
         hidden: true,
     },
+    vpnAutoStart: {
+        type: OptionType.BOOLEAN,
+        description: "Conectar a VPN ao abrir o Vesktop, após concluir o assistente. Pode solicitar autorização do sistema e reiniciar o Vesktop uma vez para aplicar a rota.",
+        default: true,
+    },
     vpnMode: {
         type: OptionType.SELECT,
         description: "Rota WireGuard isolada para este Discord. O restante do computador continua usando a rede normal.",
@@ -3124,11 +3129,8 @@ export default definePlugin({
         // A primeira execução precisa deixar o usuário atravessar as três etapas do
         // assistente antes de qualquer ativação que possa relançar o Discord.
         //
-        // Este caminho é automático (start do renderer), então usa `enableAutomatic`: ele não
-        // relança o Discord e respeita a suspensão de autostart. O relaunch ficou reservado
-        // para o botão do painel (`Native.enable`), porque repeti-lo a cada boot transformava
-        // um relaunch não confirmado num ciclo infinito de reinícios do Discord. Bridge antiga
-        // sem `enableAutomatic` simplesmente não ativa sozinha -- o painel continua ativando.
+        // O processo principal compartilha a tentativa automática com o renderer.
+        // O marcador de relaunch impede uma nova tentativa após aplicar a rota.
         if (!onboardingRequired && typeof Native?.enableAutomatic === "function") {
             void Native.enableAutomatic().then(result => {
                 if (!isLifecycleCurrent()) return;

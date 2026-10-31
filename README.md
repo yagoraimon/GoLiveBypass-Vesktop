@@ -38,6 +38,12 @@ Para qualquer uso do GoLiveBypass que não seja o plugin para Vesktop, acesse o 
 
 Se precisar reabrir o assistente, vá a **Configurações de usuário → Vencord → Plugins → GoLiveBypass**, abra as opções do plugin e clique em **Abrir guia de configuração**.
 
+### Conectar automaticamente ao abrir
+
+Após concluir o assistente, a opção **vpnAutoStart** vem ligada: o plugin tenta conectar a VPN sempre que você abre o Vesktop. Ele pode solicitar a autorização do sistema e reiniciar o Vesktop uma vez para aplicar a rota. A configuração Proton existente é reutilizada.
+
+Para desligar, abra **Configurações de usuário → Vencord → Plugins → GoLiveBypass** e desmarque **vpnAutoStart**. Se a ativação falhar, o plugin não fica reiniciando o aplicativo: use **Ativar agora** no painel da VPN. Uma sessão Proton expirada ou sem armazenamento seguro pode exigir novo login.
+
 Não precisa instalar Git, Node, pnpm ou Go. O download é conferido por SHA-256 antes de executar. As permissões necessárias para configurar a VPN são solicitadas pelo plugin depois da instalação.
 
 ## O que muda

@@ -17,7 +17,7 @@ import (
 
 //go:embed all:payload
 var embedded embed.FS
-var version = "1.0.0"
+var version = "1.0.1"
 
 var bundleFiles = []string{"vencordDesktopMain.js", "vencordDesktopPreload.js", "vencordDesktopRenderer.js", "vencordDesktopRenderer.css"}
 

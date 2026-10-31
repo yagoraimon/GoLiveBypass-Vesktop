@@ -12,6 +12,7 @@
  * confundido com o estado da GUI ou do standalone.
  */
 
+export const VPN_RELAUNCH_ARG = "--golive-vpn-relaunch";
 export const VPN_SCHEMA_VERSION = 1;
 export const VPN_OWNER_KIND = "golivebypass-plugin-vpn";
 export const VPN_SERVICE_NAMES = ["wiresock-client-service", "wiresock-pro-client-service"] as const;

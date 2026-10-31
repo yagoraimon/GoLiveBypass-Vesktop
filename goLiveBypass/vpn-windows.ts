@@ -919,13 +919,19 @@ try {
   $name='wiresock-client-service'
   $expected=${quotePowerShell(expected)}
   $service=Get-Service -Name $name -ErrorAction SilentlyContinue
-  if($service -and $service.Status -ne 'Stopped') { Stop-Service -Name $name -Force; $service.WaitForStatus('Stopped',[TimeSpan]::FromSeconds(20)) }
+  $info=Get-CimInstance Win32_Service -Filter "Name='$name'"
+  if($service -and $service.Status -ne 'Stopped') {
+    if(-not $info -or $info.PathName -cne $expected){ throw 'O serviço WireSock está ativo com outro perfil; operação cancelada' }
+    Stop-Service -Name $name -Force
+    $service.WaitForStatus('Stopped',[TimeSpan]::FromSeconds(20))
+  }
   if(-not $service) {
     & ${quotePowerShell(executable)} install -start-type 3 -config ${quotePowerShell(configPath)} -log-level info -network-lock disabled
     if($LASTEXITCODE -ne 0){ throw 'Falha ao instalar o serviço WireSock' }
   }
   $info=Get-CimInstance Win32_Service -Filter "Name='$name'"
   if(-not $info){ throw 'Serviço WireSock não encontrado após instalação' }
+  if($info.State -ne 'Stopped' -and $info.PathName -cne $expected){ throw 'O serviço WireSock está ativo com outro perfil; operação cancelada' }
   $change=Invoke-CimMethod -InputObject $info -MethodName Change -Arguments @{PathName=$expected;StartMode='Manual'}
   if($change.ReturnValue -ne 0){ throw "Falha ao atualizar o perfil do serviço: $($change.ReturnValue)" }
   $actual=Get-CimInstance Win32_Service -Filter "Name='$name'"

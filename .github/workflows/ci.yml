@@ -20,3 +20,5 @@ jobs:
       - run: go test ./...
         working-directory: installer
       - run: node scripts/test-packaged-updater.mjs
+      - run: node scripts/test-autostart.mjs
+      - run: node scripts/test-service-ownership.mjs

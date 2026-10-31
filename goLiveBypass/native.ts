@@ -76,7 +76,7 @@ import {
     waitForFile,
 } from "./vpn-linux";
 import * as proton from "./vpn-proton";
-import { safeDiagnosticDetail } from "./vpn-types";
+import { safeDiagnosticDetail, VPN_RELAUNCH_ARG } from "./vpn-types";
 import { createOperationId, createPluginLogger, trimJsonlTailByBytes, type PluginLogContext } from "./plugin-log";
 
 const PLUGIN_VERSION = "2.0.13";
@@ -397,6 +397,7 @@ function pluginEnabled(): boolean {
 function controllerSettings(): PluginSettingsRecord {
     const stored = pluginSettings();
     return {
+        vpnAutoStart: stored.vpnAutoStart !== false,
         mode: stored.vpnMode === "custom" ? "custom" : "proton",
         customConfigPath: typeof stored.customConfigPath === "string" ? stored.customConfigPath : "",
         protonUsername: typeof stored.protonUsername === "string" ? stored.protonUsername : "",
@@ -514,6 +515,8 @@ async function requestRelaunch(namespace: string | null): Promise<boolean> {
         if (/password|secret|token|auth/i.test(arg)) continue;
         clientArgs.push(arg);
     }
+
+    if (!clientArgs.includes(VPN_RELAUNCH_ARG)) clientArgs.push(VPN_RELAUNCH_ARG);
 
     const safeEnvKeys = [
         "WAYLAND_DISPLAY",
